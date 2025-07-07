@@ -14,7 +14,7 @@ export function handleOptions() {
   });
 }
 
-export function createCorsResponse(data: any, status: number = 200) {
+export function createCorsResponse(data: unknown, status: number = 200) {
   return NextResponse.json(data, {
     status,
     headers: corsHeaders,

@@ -44,7 +44,7 @@ pool.on('error', (error) => {
 // Database connection wrapper with improved error handling
 export const db = {
   // Execute query with parameters
-  async query(sql: string, params?: any[]) {
+  async query(sql: string, params?: (string | number | boolean | null | Date)[]) {
     let connection;
     try {
       connection = await pool.getConnection();
@@ -77,12 +77,12 @@ export const db = {
   },
 
   // Get single row with improved connection handling
-  async queryRow(sql: string, params?: any[]) {
+  async queryRow(sql: string, params?: (string | number | boolean | null | Date)[]) {
     let connection;
     try {
       connection = await pool.getConnection();
       const [results] = await connection.execute(sql, params);
-      const rows = results as any[];
+      const rows = results as Record<string, unknown>[];
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       console.error('Database query row error:', error);
@@ -95,7 +95,7 @@ export const db = {
         try {
           connection = await pool.getConnection();
           const [results] = await connection.execute(sql, params);
-          const rows = results as any[];
+          const rows = results as Record<string, unknown>[];
           return rows.length > 0 ? rows[0] : null;
         } catch (retryError) {
           console.error('Database queryRow retry failed:', retryError);
@@ -112,7 +112,7 @@ export const db = {
   },
 
   // Execute multiple queries in transaction
-  async transaction(queries: Array<{ sql: string; params?: any[] }>) {
+  async transaction(queries: Array<{ sql: string; params?: (string | number | boolean | null | Date)[] }>) {
     const connection = await pool.getConnection();
     
     try {
@@ -141,8 +141,9 @@ export const db = {
       const connection = await pool.getConnection();
       const [rows] = await connection.execute('SHOW STATUS LIKE "Threads_connected"');
       connection.release();
+      const rowsTyped = rows as Array<{ Variable_name: string; Value: string }>;
       return {
-        threadsConnected: rows[0]?.Value || 0,
+        threadsConnected: rowsTyped[0]?.Value || 0,
         poolConfig: {
           connectionLimit: dbConfig.connectionLimit,
           acquireTimeout: dbConfig.acquireTimeout,

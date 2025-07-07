@@ -81,8 +81,9 @@ const AdminSettings = () => {
       else if (activeTab === 'rooms') await fetchRooms();
       else if (activeTab === 'bookings') await fetchBookings();
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'System Error');
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || 'System Error');
     } finally {
       setLoading(false);
     }
@@ -230,7 +231,7 @@ const AdminSettings = () => {
     }
   };
 
-  const tabButton = (label: string, tab: TabType, Icon: any) => (
+  const tabButton = (label: string, tab: TabType, Icon: React.ComponentType<{ size?: number }>) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200
@@ -665,12 +666,8 @@ const AdminSettings = () => {
                 />
               </div>
               
-              <div>              
-}
-
-
-
-            <label className ="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   name="description"
                   value={roomForm.description || ''}

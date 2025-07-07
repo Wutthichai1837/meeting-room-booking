@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 import RoomCard from './RoomCard';
+import Image from 'next/image';
 
 interface Room {
   id: number;
@@ -32,7 +33,7 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
         const res = await fetch('/api/rooms');
         const data = await res.json();
         console.log('Rooms data from API:', data);
-        const enriched = data.map((r: any) => ({
+        const enriched = data.map((r: Room) => ({
           ...r,
           status: 'available',
           image: `/images/${r.name.toLowerCase().replace(/\s/g, '-')}.jpg`,
@@ -78,9 +79,11 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
             >
               <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                 {room.image ? (
-                  <img
+                  <Image
                     src={room.image}
                     alt={room.name}
+                    width={300}
+                    height={160}
                     className="h-full w-full object-cover"
                   />
                 ) : (

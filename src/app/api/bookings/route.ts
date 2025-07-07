@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const bookingId = (insertResult as any).insertId;
 
     if (attendees && attendees.length > 0) {
-      const attendeeQueries = attendees.map((attendee: any) => ({
+      const attendeeQueries = attendees.map((attendee: { email: string; name?: string }) => ({
         sql: 'INSERT INTO booking_attendees (booking_id, email, name) VALUES (?, ?, ?)',
         params: [bookingId, attendee.email, attendee.name || null]
       }));

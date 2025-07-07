@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   LogOut,
@@ -12,32 +12,68 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface Notification {
+  id: number;
+  title: string;
+  start_time: string;  // ISO string
+  end_time: string;    // ISO string
+  room_name: string;
+  status: string;
+}
+
 interface HeaderProps {
   onMobileMenuToggle: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // ข้อมูล notifications จำลอง
-  const notifications = [
-    {
-      id: 1,
-      title: 'Room A001 booking confirmed',
-      message: 'Your booking for today 2:00 PM - 3:00 PM',
-      time: '5 minutes ago',
-      isRead: false,
-    },
-    {
-      id: 2,
-      title: 'Room B002 available',
-      message: 'The room you requested is now available',
-      time: '1 hour ago',
-      isRead: true,
-    },
-  ];
+  // ฟังก์ชันดึง notification จาก API
+  const fetchNotifications = async () => {
+    if (!token) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setNotifications(data.data);
+      } else {
+        setError(data.message || 'เกิดข้อผิดพลาดในการดึงข้อมูลแจ้งเตือน');
+      }
+    } catch (err) {
+      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // โหลด notifications ทุกครั้งที่เปิดเมนูแจ้งเตือน
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotifications();
+    }
+  }, [showNotifications]);
+
+  // ฟังก์ชันช่วย format เวลา (เช่น 14:00 - 15:00)
+  const formatTimeRange = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+    return `${startDate.toLocaleTimeString([], options)} - ${endDate.toLocaleTimeString([], options)}`;
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -56,9 +92,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
               <Building className="w-6 h-6 text-white" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-gray-900">
-                SITC Meeting Room
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900">SITC Meeting Room</h1>
               <p className="text-sm text-gray-500">Booking System</p>
             </div>
           </div>
@@ -73,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
               className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <Bell className="w-5 h-5 text-gray-600" />
-              {notifications.some((n) => !n.isRead) && (
+              {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
               )}
             </button>
@@ -84,31 +118,34 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                   <h3 className="font-semibold text-gray-900">Notifications</h3>
                 </div>
                 <div className="max-h-64 overflow-y-auto">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-l-4 ${
-                        notification.isRead
-                          ? 'border-transparent'
-                          : 'border-blue-500 bg-blue-50'
-                      }`}
-                    >
-                      <p className="font-medium text-sm text-gray-900">
-                        {notification.title}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {notification.time}
-                      </p>
-                    </div>
-                  ))}
+                  {loading && (
+                    <p className="p-4 text-center text-gray-500">กำลังโหลด...</p>
+                  )}
+                  {error && (
+                    <p className="p-4 text-center text-red-500">{error}</p>
+                  )}
+                  {!loading && !error && notifications.length === 0 && (
+                    <p className="p-4 text-center text-gray-500">ไม่มีแจ้งเตือน</p>
+                  )}
+                  {!loading &&
+                    !error &&
+                    notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-l-4 border-blue-500 bg-blue-50"
+                      >
+                        <p className="font-medium text-sm text-gray-900">{notification.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          ห้อง: {notification.room_name}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          เวลา: {formatTimeRange(notification.start_time, notification.end_time)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1 uppercase">{notification.status}</p>
+                      </div>
+                    ))}
                 </div>
                 <div className="px-4 py-2 border-t border-gray-100">
-                  <button className="text-sm text-blue-600 hover:text-blue-800">
-                    View all notifications
-                  </button>
                 </div>
               </div>
             )}

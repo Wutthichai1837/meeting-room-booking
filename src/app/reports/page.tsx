@@ -82,8 +82,9 @@ export default function BookingsPage() {
       }
 
       setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch bookings");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Failed to fetch bookings");
     } finally {
       setLoading(false);
     }

@@ -13,7 +13,7 @@ export default function ForgetPassword() {
   const [success, setSuccess] = useState('');
 
   // Verify email function
-  const handleEmailVerification = async (e) => {
+  const handleEmailVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -44,7 +44,7 @@ export default function ForgetPassword() {
   };
 
   // Change password function
-  const handlePasswordChange = async (e) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');

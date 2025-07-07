@@ -45,7 +45,7 @@ const AuthPages = () => {
     }
   }, []);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -60,7 +60,7 @@ const AuthPages = () => {
     }
   };
 
-  const handleRememberMeChange = (e) => {
+  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRememberMe(e.target.checked);
     
     // If unchecked, remove saved credentials
