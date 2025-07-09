@@ -7,15 +7,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  CalendarDays, 
-  DoorOpen, 
-  Clock4, 
+  CalendarDays,
+  DoorOpen,
+  Clock4,
 } from 'lucide-react';
 
 interface Stat {
   title: string;
   value: string;
-  change: string;
   icon: React.ElementType;
   color: 'blue' | 'green' | 'purple' | 'orange';
 }
@@ -45,40 +44,33 @@ const DashboardOverview = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Get JWT token from localStorage
         const token = localStorage.getItem('token');
-        const authHeaders = token ? {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } : {};
+        const authHeaders = token
+          ? {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          : {};
 
         const [overviewRes, activeRes, myTodayRes, recentRes, roomStatusRes] = await Promise.all([
-          fetch('/api/dashboard/overview', {
-            headers: authHeaders
-          }),
+          fetch('/api/dashboard/overview', { headers: authHeaders }),
           fetch('/api/dashboard/active-bookings'),
-          fetch('/api/dashboard/my-bookings-today', {
-            headers: authHeaders
-          }),
+          fetch('/api/dashboard/my-bookings-today', { headers: authHeaders }),
           fetch('/api/dashboard/recent-bookings'),
-          fetch('/api/dashboard/room-status')
+          fetch('/api/dashboard/room-status'),
         ]);
 
         const overviewData = await overviewRes.json();
         const activeData = await activeRes.json();
-        
-        // Handle unauthorized response for my-bookings-today
+
         if (myTodayRes.status === 401) {
           console.warn('JWT token invalid or expired');
-          // Redirect to login or handle unauthorized state
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          // You might want to redirect to login here
           // window.location.href = '/login';
         }
-        
+
         const myTodayData = await myTodayRes.json();
-        console.log('My Booking Today:', myTodayData);
         const recentData = await recentRes.json();
         const roomStatusData = await roomStatusRes.json();
 
@@ -88,17 +80,15 @@ const DashboardOverview = () => {
           {
             title: 'Active Bookings',
             value: activeData.count.toString(),
-            change: '',
             icon: Calendar,
-            color: 'green'
+            color: 'green',
           },
           {
             title: 'My Bookings Today',
             value: myTodayData.count.toString(),
-            change: '',
             icon: Clock,
-            color: 'purple'
-          }
+            color: 'purple',
+          },
         ]);
 
         setRecentBookings(recentData.bookings || []);
@@ -151,7 +141,7 @@ const DashboardOverview = () => {
       blue: 'bg-blue-50 text-blue-700 border-blue-200',
       green: 'bg-green-50 text-green-700 border-green-200',
       purple: 'bg-purple-50 text-purple-700 border-purple-200',
-      orange: 'bg-orange-50 text-orange-700 border-orange-200'
+      orange: 'bg-orange-50 text-orange-700 border-orange-200',
     };
     return colors[color] || colors.blue;
   };
@@ -176,7 +166,6 @@ const DashboardOverview = () => {
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-xs text-gray-500">{stat.change}</p>
               </div>
             </div>
           );
@@ -184,43 +173,45 @@ const DashboardOverview = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Bookings</h3>
-      {recentBookings.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">
-          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-          <p className="text-sm">No bookings found.</p>
-        </div>
-      ) : (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {recentBookings.map((booking) => (
-        <div
-          key={booking.id}
-          className="border border-blue-100 bg-blue-50 p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200"
-        >
-          <h4 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-blue-600" />
-            {booking.title}
-          </h4>
-          <p className="text-sm text-blue-800 flex items-center gap-2">
-            <DoorOpen className="w-4 h-4 text-blue-500" />
-            <span className="font-medium">Room:</span> {booking.roomName}
-          </p>
-          <p className="text-sm text-blue-800 flex items-center gap-2 mt-1">
-            <Clock4 className="w-4 h-4 text-blue-500" />
-            <span className="font-medium">Time:</span> {booking.date} • {booking.startTime} - {booking.endTime}
-          </p>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Bookings</h3>
+        {recentBookings.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-sm">No bookings found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentBookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="border border-blue-100 bg-blue-50 p-4 rounded-lg shadow-sm hover:shadow-md transition duration-200"
+              >
+                <h4 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-blue-600" />
+                  {booking.title}
+                </h4>
+                <p className="text-sm text-blue-800 flex items-center gap-2">
+                  <DoorOpen className="w-4 h-4 text-blue-500" />
+                  <span className="font-medium">Room:</span> {booking.roomName}
+                </p>
+                <p className="text-sm text-blue-800 flex items-center gap-2 mt-1">
+                  <Clock4 className="w-4 h-4 text-blue-500" />
+                  <span className="font-medium">Time:</span> {booking.date} • {booking.startTime} - {booking.endTime}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl p-6 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Room Availability Right Now</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {roomsStatus.map((room) => (
-            <div key={room.id} className={`p-6 rounded-lg border-2 transition-all hover:shadow-sm ${getStatusColorClasses(room.status)}`}>
+            <div
+              key={room.id}
+              className={`p-6 rounded-lg border-2 transition-all hover:shadow-sm ${getStatusColorClasses(room.status)}`}
+            >
               <div className="text-center">
                 <p className="font-medium text-gray-900 mb-2">{room.name}</p>
                 <div className="flex items-center justify-center space-x-2">

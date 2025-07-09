@@ -30,13 +30,8 @@ interface Booking {
   updated_at: string;
   username: string;
   room_name: string;
-  user?: {
-    username: string;
-  };
-  room?: {
-    name: string;
-    location: string;
-  };
+  user?: { username: string };
+  room?: { name: string; location: string };
 }
 
 interface Pagination {
@@ -69,46 +64,36 @@ export default function BookingsPage() {
           search: searchTerm,
         },
       });
-      const bookingsData: Booking[] = res.data.success ? res.data.data || [] : [];
+
+      const bookingsData: Booking[] = res.data?.data || [];
       let filtered = bookingsData;
+
       if (filterStatus !== "all") {
-        filtered = bookingsData.filter((item) => item.status === filterStatus);
+        filtered = filtered.filter((b) => b.status === filterStatus);
       }
+
       filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setBookings(filtered);
 
-      if (res.data.success && res.data.data?.pagination) {
+      if (res.data.data?.pagination) {
         setPagination(res.data.data.pagination);
       }
 
       setError(null);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to fetch bookings");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to fetch bookings.");
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDateTimeRange = (startTime: string, endTime: string) => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const isSameDay = start.toDateString() === end.toDateString();
-    if (isSameDay) {
-      return `${start.toLocaleDateString("th-TH", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })} ${start.toLocaleTimeString("th-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${end.toLocaleTimeString("th-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else {
-      return `${start.toLocaleString("th-TH")} - ${end.toLocaleString("th-TH")}`;
-    }
+  const formatDateTimeRange = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    return `${s.toLocaleDateString("th-TH")} ${s.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })} - ${e.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}`;
   };
 
   const getStatusIcon = (status: string) => {
@@ -149,8 +134,15 @@ export default function BookingsPage() {
   };
 
   const handlePageChange = (page: number) => setCurrentPage(page);
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setCurrentPage(1); fetchBookings(); };
-  const handleRefresh = () => { setCurrentPage(1); fetchBookings(); };
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    fetchBookings();
+  };
+  const handleRefresh = () => {
+    setCurrentPage(1);
+    fetchBookings();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,90 +192,115 @@ export default function BookingsPage() {
           </form>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">Title</th>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">Room</th>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">Create By</th>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">DateTime</th>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {bookings.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-4 text-left font-medium text-gray-900">Title</th>
-                  <th className="px-6 py-4 text-left font-medium text-gray-900">Room</th>
-                  <th className="px-6 py-4 text-left font-medium text-gray-900">Create By</th>
-                  <th className="px-6 py-4 text-left font-medium text-gray-900">DateTime</th>
-                  <th className="px-6 py-4 text-left font-medium text-gray-900">Status</th>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <AlertCircle className="w-8 h-8 text-gray-400" />
+                      <p>No bookings found.</p>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {bookings.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <AlertCircle className="w-8 h-8 text-gray-400" />
-                        <p>No bookings found.</p>
+              ) : (
+                bookings.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{item.title}</div>
+                      {item.description && (
+                        <div className="text-sm text-gray-500 mt-1">{item.description}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <DoorOpen className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {item.room?.name || item.room_name}
+                          </div>
+                          {item.room?.location && (
+                            <div className="text-sm text-gray-500">{item.room.location}</div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                  </tr>
-                ) : (
-                  bookings.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{item.title}</div>
-                        {item.description && (
-                          <div className="text-sm text-gray-500 mt-1">{item.description}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium text-gray-900">{item.room?.name || item.room_name}</div>
-                            {item.room?.location && (
-                              <div className="text-sm text-gray-500">{item.room.location}</div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-900">{item.user?.username || item.username}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Clock4 className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-900">{formatDateTimeRange(item.start_time, item.end_time)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(item.status)}`}>
-                          {getStatusIcon(item.status)}
-                          {getStatusText(item.status)}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-900">{item.user?.username || item.username}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Clock4 className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-900">
+                          {formatDateTimeRange(item.start_time, item.end_time)}
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                          item.status
+                        )}`}
+                      >
+                        {getStatusIcon(item.status)}
+                        {getStatusText(item.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
+        {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-gray-700">
-              แสดง {((currentPage - 1) * pagination.limit) + 1} ถึง {Math.min(currentPage * pagination.limit, pagination.totalRecords)} 
-              จากทั้งหมด {pagination.totalRecords} รายการ
+              แสดง {((currentPage - 1) * pagination.limit) + 1} ถึง{" "}
+              {Math.min(currentPage * pagination.limit, pagination.totalRecords)} จาก{" "}
+              {pagination.totalRecords} รายการ
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1} className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1 rounded border disabled:opacity-50"
+              >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                <button key={page} onClick={() => handlePageChange(page)} className={`px-3 py-1 rounded ${currentPage === page ? 'bg-blue-600 text-white' : 'border hover:bg-gray-50'}`}>
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === page
+                      ? "bg-blue-600 text-white"
+                      : "border hover:bg-gray-50"
+                  }`}
+                >
                   {page}
                 </button>
               ))}
-              <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= pagination.totalPages} className="px-3 py-1 rounded border disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= pagination.totalPages}
+                className="px-3 py-1 rounded border disabled:opacity-50"
+              >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

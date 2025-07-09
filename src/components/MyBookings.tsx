@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { CalendarDays, DoorOpen, Clock4, CheckCircle, XCircle, Pencil } from 'lucide-react';
+import {
+  CalendarDays,
+  DoorOpen,
+  Clock4,
+  CheckCircle,
+  XCircle,
+  Pencil,
+} from 'lucide-react';
 
 interface Booking {
   id: number;
@@ -51,7 +58,7 @@ export default function MyBookingsPage() {
         return;
       }
 
-      const token = localStorage.getItem('token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         setError('Token not found');
         setLoading(false);
@@ -101,21 +108,22 @@ export default function MyBookingsPage() {
     });
   };
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setEditForm((prev) => ({ 
-      ...prev, 
-      [name]: name === 'attendees_count' ? parseInt(value) || 0 : value 
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: name === 'attendees_count' ? parseInt(value) || 0 : value,
     }));
   };
 
   const handleEditSubmit = async (bookingId: number) => {
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) return;
 
-      // เตรียมข้อมูลส่งไป API
       const updateData = {
         id: bookingId,
         title: editForm.title,
@@ -124,44 +132,38 @@ export default function MyBookingsPage() {
         end_time: editForm.end_time,
         attendees_count: editForm.attendees_count,
         status: editForm.status,
-        room_name: editForm.room_name
+        room_name: editForm.room_name,
       };
-
-      console.log('Sending update data:', updateData);
 
       const response = await axios.put('/api/mybookings', updateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data.success) {
-        console.log('Update successful');
-        
-        // หากเป็นการยกเลิก รีเฟรชหน้า
-        if (editForm.status.toLowerCase() === 'cancelled') {
-          window.location.reload();
-        } else {
-          // อัพเดทข้อมูลใน state
-          setBookings((prev) =>
-            prev.map((b) => (b.id === bookingId ? { 
-              ...b, 
-              title: editForm.title,
-              description: editForm.description,
-              start_time: editForm.start_time,
-              end_time: editForm.end_time,
-              attendees_count: editForm.attendees_count,
-              status: editForm.status,
-              room_name: editForm.room_name
-            } : b))
-          );
-        }
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === bookingId
+              ? {
+                  ...b,
+                  title: editForm.title,
+                  description: editForm.description,
+                  start_time: editForm.start_time,
+                  end_time: editForm.end_time,
+                  attendees_count: editForm.attendees_count,
+                  status: editForm.status,
+                  room_name: editForm.room_name,
+                }
+              : b
+          )
+        );
         setEditingBookingId(null);
       } else {
-        console.error('Update failed:', response.data.message);
-        alert('แก้ไขไม่สำเร็จ: ' + response.data.message);
+        setError(response.data.message || 'Update failed');
       }
-    } catch (error) {
-      console.error('Update failed:', error);
-      alert('เกิดข้อผิดพลาด: ' + (error as any).response?.data?.message || 'ไม่สามารถแก้ไขได้');
+    } catch (error: unknown) {
+      const errMsg =
+        (error as any)?.response?.data?.message || 'Unexpected error occurred';
+      setError(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -182,7 +184,7 @@ export default function MyBookingsPage() {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
           <table className="w-full min-w-max bg-white">
-            <thead className="bg-gray-100 text-gray-700 uppercase text-sm select-none">
+            <thead className="bg-gray-100 text-gray-700 uppercase text-sm">
               <tr>
                 <th className="border-b p-3 text-left">TITLE</th>
                 <th className="border-b p-3 text-left">ROOM</th>
@@ -194,10 +196,7 @@ export default function MyBookingsPage() {
             </thead>
             <tbody className="text-gray-800 text-sm">
               {bookings.map((b) => (
-                <tr
-                  key={b.id}
-                  className="hover:bg-blue-50 transition-colors duration-200"
-                >
+                <tr key={b.id} className="hover:bg-blue-50 transition-colors duration-200">
                   {editingBookingId === b.id ? (
                     <>
                       <td className="border-b p-3">
@@ -252,7 +251,9 @@ export default function MyBookingsPage() {
                           onClick={() => handleEditSubmit(b.id)}
                           disabled={isSubmitting}
                           className={`font-semibold hover:underline ${
-                            isSubmitting ? 'text-gray-400 cursor-not-allowed' : 'text-green-600'
+                            isSubmitting
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-green-600'
                           }`}
                         >
                           {isSubmitting ? 'Saving...' : 'Save'}
@@ -309,7 +310,7 @@ export default function MyBookingsPage() {
       )}
 
       {pagination && (
-        <div className="mt-4 text-center text-sm text-gray-600 select-none">
+        <div className="mt-4 text-center text-sm text-gray-600">
           Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalRecords} records)
         </div>
       )}

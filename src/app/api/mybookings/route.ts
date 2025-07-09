@@ -4,7 +4,7 @@ import { extractToken, verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📦 GET /api/mybookings called');
+   
 
     // 🔐 ตรวจสอบ token
     const authHeader = request.headers.get('authorization');
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    console.log('📝 PUT /api/mybookings called');
+   
 
     // 🔐 ตรวจสอบ token
     const authHeader = request.headers.get('authorization');
@@ -191,7 +191,7 @@ export async function PUT(request: NextRequest) {
 
     const result = await db.query(updateQuery, updateValues);
     
-    console.log('Update result:', result);
+   
 
     return NextResponse.json({
       success: true,

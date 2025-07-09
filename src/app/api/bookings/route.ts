@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'จองห้องประชุมสำเร็จ',
+      message: 'Bookings Successfull',
       data: {
         bookingId,
         roomName: room.name,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -38,20 +38,20 @@ const CalendarView = () => {
     fetchBookings();
   }, []);
 
-  const fetchBookings = async () => {
-    try {
-      const res = await fetch('/api/calendarview');
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(Array.isArray(data) ? data.map((b: Booking) => ({
-          ...b,
-          date: new Date(b.date).toLocaleDateString('sv-SE'), // local YYYY-MM-DD
-        })) : []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch bookings:', err);
+  const fetchBookings = useCallback(async () => {
+  try {
+    const res = await fetch('/api/calendarview');
+    if (res.ok) {
+      const data = await res.json();
+      setBookings(Array.isArray(data) ? data.map((b: Booking) => ({
+        ...b,
+        date: new Date(b.date).toLocaleDateString('sv-SE'),
+      })) : []);
     }
-  };
+  } catch (err) {
+    console.error('Failed to fetch bookings:', err);
+  }
+}, []);
 
   const formatDate = (date: Date) => date.toLocaleDateString('sv-SE'); // local YYYY-MM-DD
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Building, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Building, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 
 const AuthPages = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,7 +9,6 @@ const AuthPages = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -21,9 +20,11 @@ const AuthPages = () => {
     phone: '',
     department: '',
   });
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
 
   // API Configuration
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
   // Load saved credentials on component mount
   useEffect(() => {
@@ -45,6 +46,7 @@ const AuthPages = () => {
     }
   }, []);
 
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -57,6 +59,10 @@ const AuthPages = () => {
         ...prev,
         [name]: ''
       }));
+    }
+    // Clear alert when user starts typing
+    if (alert) {
+      setAlert(null);
     }
   };
 
@@ -159,11 +165,8 @@ const AuthPages = () => {
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
         // Save credentials if remember me is checked
@@ -173,11 +176,12 @@ const AuthPages = () => {
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         
-        alert('Login successful!');
-        console.log('Login successful:', data);
+        setAlert({ type: 'success', message: 'Login Sucessfull!' });
         
-        // Redirect to dashboard or main page
-        window.location.href = '/dashboard';
+        // Redirect to dashboard after showing alert
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
         
       } else {
         console.error('Login failed with status:', response.status);
@@ -189,17 +193,13 @@ const AuthPages = () => {
           });
         } else {
           // Handle other API errors
-          const errorMessage = data.message || `เข้าสู่ระบบไม่สำเร็จ (${response.status}) กรุณาตรวจสอบ username และรหัสผ่าน`;
-          setErrors({ 
-            general: errorMessage
-          });
+          const errorMessage = data.message || `Login Failed (${response.status}) Please check username and password`;
+          setAlert({ type: 'error', message: errorMessage });
         }
       }
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ 
-        general: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบว่า API server ทำงานอยู่หรือไม่' 
-      });
+      setAlert({ type: 'error', message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบว่า API server ทำงานอยู่หรือไม่' });
     }
   };
 
@@ -224,16 +224,6 @@ const AuthPages = () => {
         return;
       }
 
-      console.log('Sending registration data:', {
-        username: formData.username,
-        email: formData.email,
-        password: '[HIDDEN]',
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        department: formData.department,
-      });
-
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
@@ -250,40 +240,37 @@ const AuthPages = () => {
         }),
       });
 
-      console.log('Registration response status:', response.status);
+     
       
       const data = await response.json();
-      console.log('Registration response data:', data);
+    
 
       if (response.ok) {
         // Success
-        alert('Registration successful');
-        console.log('Registration successful:', data);
-        
-        // Switch to login mode
-        setIsLogin(true);
-        setFormData({
-          username: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          firstName: '',
-          lastName: '',
-          phone: '',
-          department: ''
-        });
+        setAlert({ type: 'success', message: 'ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ' });
+      
+        // Switch to login mode after showing alert
+        setTimeout(() => {
+          setIsLogin(true);
+          setFormData({
+            username: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            firstName: '',
+            lastName: '',
+            phone: '',
+            department: ''
+          });
+        }, 1500);
         
       } else {
         // Handle API error
-        setErrors({ 
-          general: data.message || 'Registration failed. Please try again.' 
-        });
+        setAlert({ type: 'error', message: data.message || 'การลงทะเบียนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
       }
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ 
-        general: 'Network error. Please check your connection and try again.' 
-      });
+      setAlert({ type: 'error', message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบการเชื่อมต่อและลองใหม่' });
     }
   };
 
@@ -312,6 +299,7 @@ const AuthPages = () => {
   const switchMode = () => {
     setIsLogin(!isLogin);
     setErrors({});
+    setAlert(null); // Clear alert when switching modes
     setFormData({
       username: '',
       email: '',
@@ -334,6 +322,61 @@ const AuthPages = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      
+      {/* Alert Component */}
+      {alert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className={`bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all duration-300 animate-slide-up ${
+            alert.type === 'success' 
+              ? 'border-l-4 border-green-500 bg-gradient-to-r from-green-50 to-white' 
+              : 'border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-white'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                {alert.type === 'success' ? (
+                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center animate-bounce shadow-lg">
+                    <CheckCircle className="w-7 h-7 text-white" />
+                  </div>
+                ) : (
+                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                    <XCircle className="w-7 h-7 text-white" />
+                  </div>
+                )}
+                <div className="ml-4">
+                  <h3 className={`text-lg font-bold ${
+                    alert.type === 'success' ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    {alert.type === 'success' ? '🎉 Login Successfull!' : '❌ Login Failed Please check username and password again!'}
+                  </h3>
+                  <p className={`mt-1 text-sm font-medium ${
+                    alert.type === 'success' ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {alert.message}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAlert(null)}
+                className="ml-4 text-gray-400 hover:text-gray-600 transition-colors hover:bg-gray-100 rounded-full p-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className={`h-2 rounded-full ${
+                  alert.type === 'success' 
+                    ? 'bg-gradient-to-r from-green-400 to-green-500' 
+                    : 'bg-gradient-to-r from-red-400 to-red-500'
+                } animate-progress shadow-sm`}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">

@@ -11,7 +11,6 @@ interface Room {
   description: string;
   capacity: number;
   image?: string | null;
-  status: 'available';
   amenities: string[];
   location: string;
   nextAvailable?: string;
@@ -31,15 +30,15 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
     const fetchRooms = async () => {
       try {
         const res = await fetch('/api/rooms');
-        const data = await res.json();
-        console.log('Rooms data from API:', data);
-        const enriched = data.map((r: Room) => ({
+        if (!res.ok) throw new Error(`Failed to fetch rooms: ${res.statusText}`);
+        const data: Room[] = await res.json();
+
+        const enriched = data.map((r) => ({
           ...r,
-          status: 'available',
           image: `/images/${r.name.toLowerCase().replace(/\s/g, '-')}.jpg`,
-          amenities: [],
+          amenities: r.amenities || [],
         }));
-        console.log('Enriched rooms:', enriched);
+
         setRooms(enriched);
       } catch (err) {
         console.error('Failed to fetch rooms:', err);
@@ -48,14 +47,17 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
       }
     };
 
-    fetchRooms();
+    if (externalRooms && externalRooms.length > 0) {
+      setRooms(externalRooms);
+      setLoading(false);
+    } else {
+      fetchRooms();
+    }
   }, [externalRooms]);
 
   const handleBook = (roomId: number) => {
     if (onBook) {
       onBook(roomId);
-    } else {
-      console.log('Booking room with ID:', roomId);
     }
   };
 
@@ -67,8 +69,16 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
     );
   }
 
+  if (rooms.length === 0) {
+    return (
+      <div className="bg-gray-50 flex items-center justify-center py-12 text-gray-500">
+        No meeting rooms found.
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Meeting Rooms</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -77,14 +87,16 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
               key={room.id}
               className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
             >
-              <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+              <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center relative">
                 {room.image ? (
                   <Image
                     src={room.image}
                     alt={room.name}
                     width={300}
                     height={160}
-                    className="h-full w-full object-cover"
+                    className="object-cover w-full h-full"
+                    priority
+                    unoptimized={false} // Set true only if you don't want image optimization on Vercel
                   />
                 ) : (
                   <div className="text-center">
@@ -100,20 +112,16 @@ const MeetingRooms: React.FC<MeetingRoomsProps> = ({ rooms: externalRooms, onBoo
                 <div className="flex justify-between text-sm text-gray-600 mb-3">
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    <span>{room.capacity} person</span>
+                    <span>{room.capacity} persons</span>
                   </div>
                 </div>
-                <div className="flex justify-center">
+                <div className="flex justify-center mt-auto">
                   <button
                     onClick={() => handleBook(room.id)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                    disabled={room.status !== 'available'}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm"
+                    type="button"
                   >
-                    {room.status === 'available'
-                      ? 'Book Now'
-                      : room.status === 'occupied'
-                      ? 'Occupied'
-                      : 'Maintenance'}
+                    Book Now
                   </button>
                 </div>
               </div>
@@ -130,7 +138,6 @@ const MeetingRoomApp: React.FC = () => {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
 
   const handleBookClick = (roomId: number) => {
-    console.log('Book button clicked for room ID:', roomId, typeof roomId);
     setSelectedRoomId(roomId);
     setCurrentView('booking');
   };

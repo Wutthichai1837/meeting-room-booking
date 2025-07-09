@@ -1,206 +1,130 @@
 import mysql from 'mysql2/promise';
 
-// Database configuration with improved connection management
+// Connection pool config
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'sitc_meeting_booking',
   waitForConnections: true,
-  connectionLimit: 20,           // Increased from 10
+  connectionLimit: 20,
   queueLimit: 0,
-  acquireTimeout: 60000,         // 60 seconds timeout for getting connection
-  timeout: 60000,                // 60 seconds query timeout
-  reconnect: true,
+  acquireTimeout: 60000,
   charset: 'utf8mb4',
-  timezone: '+07:00',            // Thailand timezone
-  // Additional connection management settings
-  idleTimeout: 600000,           // 10 minutes idle timeout
-  maxIdle: 10,                   // Maximum idle connections
+  timezone: '+07:00',
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
+  keepAliveInitialDelay: 0
 };
 
 // Create connection pool
 const pool = mysql.createPool(dbConfig);
 
-// Add connection pool event listeners for monitoring
-pool.on('connection', (connection) => {
-  console.log('📊 New DB connection established:', connection.threadId);
-});
+// Event listeners (optional in production; can be disabled for silence)
+if (process.env.NODE_ENV !== 'production') {
+  pool.on('connection', conn => console.log('📊 New DB connection:', conn.threadId));
+  pool.on('acquire', conn => console.log('🔄 Connection acquired:', conn.threadId));
+  pool.on('release', conn => console.log('✅ Connection released:', conn.threadId));
+  pool.on('error', err => console.error('❌ Pool error:', err));
+}
 
-pool.on('acquire', (connection) => {
-  console.log('🔄 Connection acquired:', connection.threadId);
-});
-
-pool.on('release', (connection) => {
-  console.log('✅ Connection released:', connection.threadId);
-});
-
-pool.on('error', (error) => {
-  console.error('❌ Database pool error:', error);
-});
-
-// Database connection wrapper with improved error handling
 export const db = {
-  // Execute query with parameters
-  async query(sql: string, params?: (string | number | boolean | null | Date)[]) {
-    let connection;
+  async query(sql: string, params?: any[]) {
+    let conn;
     try {
-      connection = await pool.getConnection();
-      const [results] = await connection.execute(sql, params);
+      conn = await pool.getConnection();
+      const [results] = await conn.execute(sql, params);
       return results;
-    } catch (error) {
-      console.error('Database query error:', error);
-      
-      // Check if it's a connection error and retry once
-      if (error.code === 'ER_CON_COUNT_ERROR' || error.code === 'ECONNRESET') {
-        console.log('🔄 Retrying database query due to connection error...');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-        
-        try {
-          connection = await pool.getConnection();
-          const [results] = await connection.execute(sql, params);
-          return results;
-        } catch (retryError) {
-          console.error('Database query retry failed:', retryError);
-          throw retryError;
-        } finally {
-          if (connection) connection.release();
-        }
-      }
-      
+    } catch (error: any) {
+      console.error('❌ Query error:', error);
       throw error;
     } finally {
-      if (connection) connection.release();
+      conn?.release();
     }
   },
 
-  // Get single row with improved connection handling
-  async queryRow(sql: string, params?: (string | number | boolean | null | Date)[]) {
-    let connection;
-    try {
-      connection = await pool.getConnection();
-      const [results] = await connection.execute(sql, params);
-      const rows = results as Record<string, unknown>[];
-      return rows.length > 0 ? rows[0] : null;
-    } catch (error) {
-      console.error('Database query row error:', error);
-      
-      // Check if it's a connection error and retry once
-      if (error.code === 'ER_CON_COUNT_ERROR' || error.code === 'ECONNRESET') {
-        console.log('🔄 Retrying database queryRow due to connection error...');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-        
-        try {
-          connection = await pool.getConnection();
-          const [results] = await connection.execute(sql, params);
-          const rows = results as Record<string, unknown>[];
-          return rows.length > 0 ? rows[0] : null;
-        } catch (retryError) {
-          console.error('Database queryRow retry failed:', retryError);
-          throw retryError;
-        } finally {
-          if (connection) connection.release();
-        }
-      }
-      
-      throw error;
-    } finally {
-      if (connection) connection.release();
-    }
+  async queryRow(sql: string, params?: any[]) {
+    const results = await this.query(sql, params);
+    const rows = results as Record<string, any>[];
+    return rows.length ? rows[0] : null;
   },
 
-  // Execute multiple queries in transaction
-  async transaction(queries: Array<{ sql: string; params?: (string | number | boolean | null | Date)[] }>) {
-    const connection = await pool.getConnection();
-    
+  async transaction(queries: Array<{ sql: string; params?: any[] }>) {
+    const conn = await pool.getConnection();
     try {
-      await connection.beginTransaction();
-      
+      await conn.beginTransaction();
       const results = [];
-      for (const query of queries) {
-        const [result] = await connection.execute(query.sql, query.params);
-        results.push(result);
+      for (const q of queries) {
+        const [res] = await conn.execute(q.sql, q.params);
+        results.push(res);
       }
-      
-      await connection.commit();
+      await conn.commit();
       return results;
-    } catch (error) {
-      await connection.rollback();
-      console.error('Database transaction error:', error);
-      throw error;
+    } catch (err) {
+      await conn.rollback();
+      console.error('❌ Transaction error:', err);
+      throw err;
     } finally {
-      connection.release();
+      conn.release();
     }
   },
 
-  // Get connection pool status
   async getPoolStatus() {
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.execute('SHOW STATUS LIKE "Threads_connected"');
-      connection.release();
+      const conn = await pool.getConnection();
+      const [rows] = await conn.execute('SHOW STATUS LIKE "Threads_connected"');
+      conn.release();
       const rowsTyped = rows as Array<{ Variable_name: string; Value: string }>;
       return {
-        threadsConnected: rowsTyped[0]?.Value || 0,
+        threadsConnected: rowsTyped?.[0]?.Value || 0,
         poolConfig: {
           connectionLimit: dbConfig.connectionLimit,
-          acquireTimeout: dbConfig.acquireTimeout,
-          timeout: dbConfig.timeout
+          acquireTimeout: dbConfig.acquireTimeout
         }
       };
     } catch (error) {
-      console.error('Error getting pool status:', error);
+      console.error('❌ Pool status error:', error);
       return null;
     }
   },
 
-  // Health check
   async healthCheck() {
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.execute('SELECT 1 as healthy');
-      connection.release();
+      const conn = await pool.getConnection();
+      await conn.execute('SELECT 1');
+      conn.release();
       return { healthy: true, timestamp: new Date().toISOString() };
-    } catch (error) {
-      console.error('Database health check failed:', error);
-      return { healthy: false, error: error.message, timestamp: new Date().toISOString() };
+    } catch (err: any) {
+      return { healthy: false, error: err.message, timestamp: new Date().toISOString() };
     }
   },
 
-  // Close pool (for cleanup)
   async close() {
-    console.log('🔒 Closing database connection pool...');
+    console.log('🧹 Closing pool...');
     await pool.end();
   }
 };
 
-// Test database connection with better error handling
 export async function testConnection() {
   try {
-    const connection = await pool.getConnection();
-    const [rows] = await connection.execute('SELECT 1 as test');
+    const conn = await pool.getConnection();
+    await conn.execute('SELECT 1');
+    conn.release();
     console.log('✅ Database connected successfully');
-    connection.release();
     return true;
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error('❌ Connection test failed:', error);
     return false;
   }
 }
 
-// Graceful shutdown handler
-process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM received, closing database connections...');
+// Graceful shutdown
+const handleShutdown = async (signal: string) => {
+  console.log(`⚠️ ${signal} received. Cleaning up...`);
   await db.close();
   process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-  console.log('🛑 SIGINT received, closing database connections...');
-  await db.close();
-  process.exit(0);
-});
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
 export default db;
