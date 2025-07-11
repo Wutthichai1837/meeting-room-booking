@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
-import { verifyPassword, hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const user = await db.queryRow(
       `SELECT id, password_hash FROM users WHERE email = ?`,
       [email]
-    ) as any;
+    ) as { id: number; password_hash: string } | null;
 
     if (!user) {
       return NextResponse.json(

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   Building2,
@@ -70,11 +70,8 @@ const AdminSettings = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleteType, setDeleteType] = useState<'user' | 'room' | 'booking' | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === 'users') await fetchUsers();
@@ -87,7 +84,11 @@ const AdminSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const fetchUsers = async () => {
     try {

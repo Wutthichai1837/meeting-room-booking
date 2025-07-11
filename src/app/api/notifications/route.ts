@@ -1,7 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 
-export async function GET(request: NextRequest) {
+type Booking = {
+  id: number;
+  title: string;
+  start_time: string;
+  end_time: string;
+  room_name: string;
+  status: string;
+  created_at: string;
+  user_id: number;
+};
+
+export async function GET() {
   try {
     const now = new Date();
     const thaiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
@@ -11,9 +22,8 @@ export async function GET(request: NextRequest) {
     const notifyBeforeDate = new Date(thaiTime.getTime() + notifyBeforeMinutes * 60000);
     const notifyBeforeLocalStr = notifyBeforeDate.toISOString().slice(0, 19).replace('T', ' ');
 
-
-    // Get upcoming bookings
-    const upcomingBookings = await db.query(
+    // ดึงข้อมูล upcoming bookings
+    const upcomingBookingsResult = await db.query(
       `SELECT b.id, b.title, b.start_time, b.end_time, r.name as room_name, b.status,
               b.created_at, b.user_id
        FROM bookings b
@@ -24,11 +34,10 @@ export async function GET(request: NextRequest) {
        LIMIT 50`,
       [nowLocalStr]
     );
+    const upcomingBookings = upcomingBookingsResult as Booking[];
 
-
-
-    // Get bookings starting soon (within 15 minutes)
-    const nearBookings = await db.query(
+    // ดึงข้อมูล bookings ที่กำลังจะเริ่ม (ภายใน 15 นาที)
+    const nearBookingsResult = await db.query(
       `SELECT b.id, b.title, b.start_time, b.end_time, r.name as room_name, b.status,
               b.created_at, b.user_id
        FROM bookings b
@@ -38,11 +47,10 @@ export async function GET(request: NextRequest) {
        ORDER BY b.start_time ASC`,
       [nowLocalStr, notifyBeforeLocalStr]
     );
+    const nearBookings = nearBookingsResult as Booking[];
 
-  
-
-    // Get recently created bookings (within 2 hours)
-    const recentBookings = await db.query(
+    // ดึงข้อมูล bookings ที่สร้างใหม่ล่าสุด (ภายใน 2 ชั่วโมง)
+    const recentBookingsResult = await db.query(
       `SELECT b.id, b.title, b.start_time, b.end_time, r.name as room_name, b.status,
               b.created_at, b.user_id
        FROM bookings b
@@ -52,13 +60,25 @@ export async function GET(request: NextRequest) {
        ORDER BY b.created_at DESC
        LIMIT 20`
     );
+    const recentBookings = recentBookingsResult as Booking[];
 
+    const notifications: Array<{
+      id: number;
+      type: string;
+      title: string;
+      start_time: string;
+      end_time: string;
+      room_name: string;
+      status: string;
+      message: string;
+      priority: string;
+      created_at?: string;
+      minutes_until?: number;
+      hours_until?: number;
+    }> = [];
 
-
-    const notifications: any[] = [];
-
-    // New booking notifications
-    recentBookings.forEach((booking: any) => {
+    // การจองใหม่
+    recentBookings.forEach((booking) => {
       notifications.push({
         id: booking.id,
         type: 'new_booking',
@@ -73,8 +93,8 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Meeting reminder notifications (starting in <= 15 minutes)
-    nearBookings.forEach((booking: any) => {
+    // แจ้งเตือนใกล้เริ่ม
+    nearBookings.forEach((booking) => {
       const startTime = new Date(booking.start_time);
       const diffMins = (startTime.getTime() - thaiTime.getTime()) / (1000 * 60);
       if (diffMins > 0 && diffMins <= 15) {
@@ -93,8 +113,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Upcoming meeting notifications (within 24 hours)
-    upcomingBookings.forEach((booking: any) => {
+    // แจ้งเตือนประชุมที่จะมาถึงภายใน 24 ชั่วโมง
+    upcomingBookings.forEach((booking) => {
       const startTime = new Date(booking.start_time);
       const diffHours = (startTime.getTime() - thaiTime.getTime()) / (1000 * 60 * 60);
       if (diffHours <= 24 && diffHours > 0.25) {
@@ -113,11 +133,9 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  
-
-    // Sort notifications by priority and time
+    // เรียงลำดับตาม priority และเวลาเริ่ม
     notifications.sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
       const aPriority = priorityOrder[a.priority] || 0;
       const bPriority = priorityOrder[b.priority] || 0;
 

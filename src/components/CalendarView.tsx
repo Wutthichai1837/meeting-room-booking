@@ -11,7 +11,6 @@ import {
   Briefcase,
 } from 'lucide-react';
 
-
 interface Booking {
   id: number;
   title: string;
@@ -34,24 +33,28 @@ const CalendarView = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedBookings, setSelectedBookings] = useState<Booking[]>([]);
 
-  useEffect(() => {
-    fetchBookings();
+  const fetchBookings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/calendarview');
+      if (res.ok) {
+        const data = await res.json();
+        setBookings(
+          Array.isArray(data)
+            ? data.map((b: Booking) => ({
+                ...b,
+                date: new Date(b.date).toLocaleDateString('sv-SE'),
+              }))
+            : []
+        );
+      }
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+    }
   }, []);
 
-  const fetchBookings = useCallback(async () => {
-  try {
-    const res = await fetch('/api/calendarview');
-    if (res.ok) {
-      const data = await res.json();
-      setBookings(Array.isArray(data) ? data.map((b: Booking) => ({
-        ...b,
-        date: new Date(b.date).toLocaleDateString('sv-SE'),
-      })) : []);
-    }
-  } catch (err) {
-    console.error('Failed to fetch bookings:', err);
-  }
-}, []);
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const formatDate = (date: Date) => date.toLocaleDateString('sv-SE'); // local YYYY-MM-DD
 
@@ -61,13 +64,13 @@ const CalendarView = () => {
     return date.toLocaleDateString('en-GB', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
   const getBookingsForDate = (date: Date) => {
     const dateStr = formatDate(date);
-    return bookings.filter(b => b.date === dateStr);
+    return bookings.filter((b) => b.date === dateStr);
   };
 
   const handleDayClick = (day: number) => {
@@ -90,22 +93,40 @@ const CalendarView = () => {
     return days;
   };
 
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const weekDays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'pending': return 'bg-amber-100 text-amber-800 border-amber-200';
-      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'confirmed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'pending':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
   const isToday = (day: number) => {
     const today = new Date();
-    return day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
-           currentDate.getFullYear() === today.getFullYear();
+    return (
+      day === today.getDate() &&
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear()
+    );
   };
 
   const navigateMonth = (direction: number) => {
@@ -116,7 +137,7 @@ const CalendarView = () => {
 
   const getTodayBookings = () => {
     const todayStr = formatDate(new Date());
-    return bookings.filter(booking => booking.date === todayStr);
+    return bookings.filter((booking) => booking.date === todayStr);
   };
 
   const todayBookings = getTodayBookings();
@@ -138,7 +159,7 @@ const CalendarView = () => {
               </div>
               <div className="h-8 w-px bg-gray-300"></div>
               <div className="flex items-center gap-3">
-                <button 
+                <button
                   onClick={() => navigateMonth(-1)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -147,7 +168,7 @@ const CalendarView = () => {
                 <span className="text-xl font-semibold text-gray-800 min-w-[200px] text-center">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </span>
-                <button 
+                <button
                   onClick={() => navigateMonth(1)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -163,17 +184,20 @@ const CalendarView = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg border border-white/20 backdrop-blur-sm p-6">
               <div className="grid grid-cols-7 gap-2 mb-4">
-                {weekDays.map(day => (
-                  <div key={day} className="text-center font-semibold text-gray-600 bg-gray-50 py-3 rounded-lg">
+                {weekDays.map((day) => (
+                  <div
+                    key={day}
+                    className="text-center font-semibold text-gray-600 bg-gray-50 py-3 rounded-lg"
+                  >
                     {day}
                   </div>
                 ))}
               </div>
-              
+
               <div className="grid grid-cols-7 gap-2">
                 {getDaysInMonth(currentDate).map((day, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`border-2 h-32 p-2 cursor-pointer transition-all duration-200 rounded-xl ${
                       day ? 'hover:bg-blue-50 hover:border-blue-200 hover:shadow-md' : ''
                     } ${isToday(day || 0) ? 'bg-blue-100 border-blue-300' : 'border-gray-100'}`}
@@ -181,21 +205,25 @@ const CalendarView = () => {
                   >
                     {day && (
                       <>
-                        <div className={`text-sm font-bold mb-1 ${
-                          isToday(day) ? 'text-blue-600' : 'text-gray-800'
-                        }`}>
+                        <div
+                          className={`text-sm font-bold mb-1 ${
+                            isToday(day) ? 'text-blue-600' : 'text-gray-800'
+                          }`}
+                        >
                           {day}
                         </div>
                         <div className="space-y-1">
-                          {getBookingsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).slice(0, 2).map(b => (
-                            <div 
-                              key={b.id} 
-                              className={`text-xs p-1.5 rounded-md text-white truncate shadow-sm ${b.color}`} 
-                              title={b.title}
-                            >
-                              {b.title}
-                            </div>
-                          ))}
+                          {getBookingsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
+                            .slice(0, 2)
+                            .map((b) => (
+                              <div
+                                key={b.id}
+                                className={`text-xs p-1.5 rounded-md text-white truncate shadow-sm ${b.color}`}
+                                title={b.title}
+                              >
+                                {b.title}
+                              </div>
+                            ))}
                           {getBookingsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).length > 2 && (
                             <div className="text-xs text-gray-500 text-center">
                               +{getBookingsForDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).length - 2} more
@@ -217,12 +245,10 @@ const CalendarView = () => {
                 <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white">
                   <Clock size={20} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">Today's Bookings</h3>
-                <span className="text-sm text-gray-500">
-                  ({new Date().toLocaleDateString('en-GB')})
-                </span>
+                <h3 className="text-xl font-semibold text-gray-800">Today&rsquo;s Bookings</h3>
+                <span className="text-sm text-gray-500">({new Date().toLocaleDateString('en-GB')})</span>
               </div>
-              
+
               <div className="space-y-3">
                 {todayBookings.length === 0 ? (
                   <div className="text-center py-8">
@@ -231,38 +257,45 @@ const CalendarView = () => {
                     </div>
                     <p className="text-gray-500">No bookings today</p>
                   </div>
-                ) : todayBookings.map(b => (
-                  <div key={b.id} className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-800">{b.title}</h4>
-                      <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(b.status)}`}>
-                        {b.status}
-                      </span>
+                ) : (
+                  todayBookings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold text-gray-800">{b.title}</h4>
+                        <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(b.status)}`}>
+                          {b.status}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <User size={14} />
+                          <span>{b.username}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={14} />
+                          <span>{b.department}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} />
+                          <span>
+                            {b.startTime} - {b.endTime}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} />
+                          <span>{b.room}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users size={14} />
+                          <span>{b.attendees} people</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <User size={14} />
-                        <span>{b.username}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Briefcase size={14} />
-                        <span>{b.department}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} />
-                        <span>{b.startTime} - {b.endTime}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} />
-                        <span>{b.room}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users size={14} />
-                        <span>{b.attendees} people</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -277,7 +310,7 @@ const CalendarView = () => {
                   <h2 className="text-xl font-bold text-gray-800">
                     Bookings on {formatDateThai(selectedDate)}
                   </h2>
-                  <button 
+                  <button
                     onClick={() => setShowPopup(false)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
@@ -285,7 +318,7 @@ const CalendarView = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div className="p-6">
                 {selectedBookings.length === 0 ? (
                   <div className="text-center py-12">
@@ -296,8 +329,11 @@ const CalendarView = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {selectedBookings.map(b => (
-                      <div key={b.id} className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-100">
+                    {selectedBookings.map((b) => (
+                      <div
+                        key={b.id}
+                        className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-100"
+                      >
                         <div className="flex justify-between items-start mb-3">
                           <h3 className="text-lg font-semibold text-gray-800">{b.title}</h3>
                           <span className={`text-sm px-3 py-1 rounded-full border ${getStatusColor(b.status)}`}>
@@ -315,7 +351,9 @@ const CalendarView = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock size={16} />
-                            <span>{b.startTime} - {b.endTime}</span>
+                            <span>
+                              {b.startTime} - {b.endTime}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <MapPin size={16} />

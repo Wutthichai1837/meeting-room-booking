@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'เพิ่มผู้ใช้สำเร็จ',
-      data: { id: (insertResult as any).insertId }
+      data: { id: (insertResult as { insertId: number }).insertId }
     }, { status: 201 });
 
   } catch (error) {

@@ -357,7 +357,7 @@ Attendees: ${form.attendees} people`);
           </form>
         )}
 
-        {step === 'confirm' && (
+        {(step === 'confirm' || step === 'submitting') && (
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4 text-center">Confirm Booking Details</h3>

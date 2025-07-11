@@ -26,7 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const room = await db.queryRow(
       `SELECT id FROM meeting_rooms WHERE name = ? LIMIT 1`,
       [roomName]
-    ) as any;
+    ) as { id: number } | null;
 
     if (!room) return NextResponse.json({ success: false, message: 'Room not found' }, { status: 404 });
 

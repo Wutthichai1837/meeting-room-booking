@@ -76,7 +76,20 @@ export async function GET(request: NextRequest) {
         `
       );
 
-      const formattedBookings = (bookings as any[]).map((booking) => ({
+      const formattedBookings = (bookings as {
+        id: number;
+        title: string;
+        room_name: string;
+        start_time_format: string;
+        end_time_format: string;
+        date: string;
+        attendees_count: number;
+        status: string;
+        color: string;
+        username: string;
+        department: string;
+        user_id: number;
+      }[]).map((booking) => ({
         id: booking.id,
         title: booking.title,
         room: booking.room_name,

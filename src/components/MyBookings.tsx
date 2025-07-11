@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import type { AxiosError } from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import {
   CalendarDays,
@@ -160,9 +161,9 @@ export default function MyBookingsPage() {
       } else {
         setError(response.data.message || 'Update failed');
       }
-    } catch (error: unknown) {
-      const errMsg =
-        (error as any)?.response?.data?.message || 'Unexpected error occurred';
+      } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errMsg = axiosError.response?.data?.message || 'Unexpected error occurred';
       setError(errMsg);
     } finally {
       setIsSubmitting(false);

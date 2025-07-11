@@ -52,10 +52,19 @@ export async function GET(request: NextRequest) {
     const countQuery = `SELECT COUNT(*) as total ${baseQuery}`;
     const queryParams = [username];
 
-    const countResult = await db.queryRow(countQuery, queryParams) as any;
+    const countResult = await db.queryRow(countQuery, queryParams) as { total: number } | null;
     const totalRecords = countResult?.total || 0;
 
-    const bookingsRaw = await db.query(dataQuery, [...queryParams, limit, offset]) as any[];
+    const bookingsRaw = await db.query(dataQuery, [...queryParams, limit, offset]) as {
+      id: number;
+      title: string;
+      room_name: string;
+      start_time: string;
+      end_time: string;
+      status: string;
+      attendees_count: number;
+      created_at: string;
+    }[];
 
     const bookings = bookingsRaw.map(booking => ({
       ...booking,
@@ -123,7 +132,7 @@ export async function PUT(request: NextRequest) {
       const room = await db.queryRow(
         'SELECT id FROM meeting_rooms WHERE name = ?',
         [room_name]
-      ) as any;
+      ) as { id: number } | null;
       
       if (!room) {
         return NextResponse.json(
@@ -138,7 +147,7 @@ export async function PUT(request: NextRequest) {
     const existingBooking = await db.queryRow(
       'SELECT * FROM bookings WHERE id = ? AND username = ?',
       [id, username]
-    ) as any;
+    ) as { id: number; title: string; room_id: number; start_time: string; end_time: string; status: string } | null;
 
     if (!existingBooking) {
       return NextResponse.json(
@@ -189,7 +198,7 @@ export async function PUT(request: NextRequest) {
     const updateQuery = `UPDATE bookings SET ${updateFields.join(', ')} WHERE id = ? AND username = ?`;
     updateValues.push(id, username);
 
-    const result = await db.query(updateQuery, updateValues);
+    await db.query(updateQuery, updateValues);
     
    
 

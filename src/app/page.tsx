@@ -8,7 +8,7 @@ const AuthPages = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ [key: string]: string | boolean }>({});
   const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -47,7 +47,8 @@ const AuthPages = () => {
   }, []);
 
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -81,7 +82,7 @@ const AuthPages = () => {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: { [key: string]: string } = {};
 
     if (isLogin) {
       // Login validations
@@ -206,8 +207,12 @@ const AuthPages = () => {
   const handleRegister = async () => {
     try {
       // Client-side validation
-      const requiredFields = ['username', 'email', 'password', 'firstName', 'lastName', 'department'];
-      const missingFields = requiredFields.filter(field => !formData[field] || formData[field].trim() === '');
+      const requiredFields = ['username', 'email', 'password', 'firstName', 'lastName', 'department'] as const;
+
+      const missingFields = requiredFields.filter((field: keyof typeof formData) => {
+        const value = formData[field];
+        return !value || value.trim() === '';
+      });
       
       if (missingFields.length > 0) {
         setErrors({ 
@@ -313,7 +318,7 @@ const AuthPages = () => {
     setRememberMe(false);
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !isLoading) {
       e.preventDefault();
       handleSubmit();

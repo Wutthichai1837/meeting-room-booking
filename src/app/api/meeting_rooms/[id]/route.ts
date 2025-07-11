@@ -10,7 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const data = await db.query('SELECT * FROM meeting_rooms WHERE id = ?', [roomId]) as any[];
+    const data = await db.query('SELECT * FROM meeting_rooms WHERE id = ?', [roomId]) as {
+      id: number;
+      name: string;
+      description: string;
+      location: string;
+      capacity: number;
+      is_active: boolean;
+    }[];
     
     if (data.length === 0) {
       return NextResponse.json({ message: 'Room not found' }, { status: 404 });

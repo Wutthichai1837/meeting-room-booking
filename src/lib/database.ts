@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 
 // Connection pool config
 const dbConfig = {
@@ -9,11 +9,11 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0,
-  acquireTimeout: 60000,
+  connectTimeout: 60000, 
   charset: 'utf8mb4',
   timezone: '+07:00',
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  keepAliveInitialDelay: 0,
 };
 
 // Create connection pool
@@ -21,20 +21,23 @@ const pool = mysql.createPool(dbConfig);
 
 // Event listeners (optional in production; can be disabled for silence)
 if (process.env.NODE_ENV !== 'production') {
-  pool.on('connection', conn => console.log('📊 New DB connection:', conn.threadId));
-  pool.on('acquire', conn => console.log('🔄 Connection acquired:', conn.threadId));
-  pool.on('release', conn => console.log('✅ Connection released:', conn.threadId));
-  pool.on('error', err => console.error('❌ Pool error:', err));
+  pool.on('connection', (conn: PoolConnection) => console.log('📊 New DB connection:', conn.threadId));
+  pool.on('acquire', (conn: PoolConnection) => console.log('🔄 Connection acquired:', conn.threadId));
+  pool.on('release', (conn: PoolConnection) => console.log('✅ Connection released:', conn.threadId));
+  (pool as any).on('error', (err: Error) => console.error('❌ Pool error:', err));
 }
 
 export const db = {
-  async query(sql: string, params?: any[]) {
-    let conn;
+  async query<T extends RowDataPacket[] | ResultSetHeader>(
+    sql: string,
+    params?: unknown[]
+  ): Promise<T> {
+    let conn: PoolConnection | undefined;
     try {
       conn = await pool.getConnection();
-      const [results] = await conn.execute(sql, params);
+      const [results] = await conn.execute<T>(sql, params);
       return results;
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Query error:', error);
       throw error;
     } finally {
@@ -42,17 +45,16 @@ export const db = {
     }
   },
 
-  async queryRow(sql: string, params?: any[]) {
-    const results = await this.query(sql, params);
-    const rows = results as Record<string, any>[];
-    return rows.length ? rows[0] : null;
+  async queryRow<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | null> {
+    const results = await this.query<RowDataPacket[]>(sql, params);
+    return results.length ? (results[0] as T) : null;
   },
 
-  async transaction(queries: Array<{ sql: string; params?: any[] }>) {
+  async transaction(queries: Array<{ sql: string; params?: unknown[] }>): Promise<unknown[]> {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
-      const results = [];
+      const results: unknown[] = [];
       for (const q of queries) {
         const [res] = await conn.execute(q.sql, q.params);
         results.push(res);
@@ -68,18 +70,20 @@ export const db = {
     }
   },
 
-  async getPoolStatus() {
+  async getPoolStatus(): Promise<{
+    threadsConnected: string | number;
+    poolConfig: { connectionLimit: number; connectTimeout: number };
+  } | null> {
     try {
       const conn = await pool.getConnection();
-      const [rows] = await conn.execute('SHOW STATUS LIKE "Threads_connected"');
+      const [rows] = await conn.execute<RowDataPacket[]>('SHOW STATUS LIKE "Threads_connected"');
       conn.release();
-      const rowsTyped = rows as Array<{ Variable_name: string; Value: string }>;
       return {
-        threadsConnected: rowsTyped?.[0]?.Value || 0,
+        threadsConnected: rows?.[0]?.Value || 0,
         poolConfig: {
           connectionLimit: dbConfig.connectionLimit,
-          acquireTimeout: dbConfig.acquireTimeout
-        }
+          connectTimeout: dbConfig.connectTimeout,
+        },
       };
     } catch (error) {
       console.error('❌ Pool status error:', error);
@@ -87,24 +91,33 @@ export const db = {
     }
   },
 
-  async healthCheck() {
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    error?: string;
+    timestamp: string;
+  }> {
     try {
       const conn = await pool.getConnection();
       await conn.execute('SELECT 1');
       conn.release();
       return { healthy: true, timestamp: new Date().toISOString() };
-    } catch (err: any) {
-      return { healthy: false, error: err.message, timestamp: new Date().toISOString() };
+    } catch (err) {
+      const error = err as Error;
+      return {
+        healthy: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
     }
   },
 
-  async close() {
+  async close(): Promise<void> {
     console.log('🧹 Closing pool...');
     await pool.end();
-  }
+  },
 };
 
-export async function testConnection() {
+export async function testConnection(): Promise<boolean> {
   try {
     const conn = await pool.getConnection();
     await conn.execute('SELECT 1');

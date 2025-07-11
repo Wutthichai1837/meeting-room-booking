@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
     if (!email) {
       return NextResponse.json(
-        { success: false, message: 'กรุณาระบุอีเมล' },
+        { success: false, message: 'Please provide an email.' },
         { status: 400 }
       );
     }
@@ -16,23 +16,23 @@ export async function POST(request: NextRequest) {
     const user = await db.queryRow(
       `SELECT id FROM users WHERE email = ?`,
       [email]
-    ) as any;
+    ) as { id: number } | null;
 
     if (!user) {
       return NextResponse.json(
-        { success: false, message: 'ไม่พบอีเมลนี้ในระบบ' },
+        { success: false, message: 'Email not found in the system.' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'พบอีเมลในระบบ',
+      message: 'Email found in the system.',
     });
   } catch (error) {
     console.error('verify-email error:', error);
     return NextResponse.json(
-      { success: false, message: 'เกิดข้อผิดพลาดในระบบ' },
+      { success: false, message: 'An unexpected error occurred.' },
       { status: 500 }
     );
   }

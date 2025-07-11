@@ -1,17 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import {
-  FileText,
   DoorOpen,
   Clock4,
   User,
   AlertCircle,
   CheckCircle,
   XCircle,
-  MapPin,
-  Users,
   Search,
   RefreshCw,
   ChevronLeft,
@@ -44,19 +41,12 @@ interface Pagination {
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [currentPage, searchTerm, filterStatus]);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await axios.get("/api/bookings", {
         params: {
           page: currentPage,
@@ -72,20 +62,26 @@ export default function BookingsPage() {
         filtered = filtered.filter((b) => b.status === filterStatus);
       }
 
-      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      filtered.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
       setBookings(filtered);
 
-      if (res.data.data?.pagination) {
-        setPagination(res.data.data.pagination);
+      if (res.data.pagination) {
+        setPagination(res.data.pagination);
       }
-
-      setError(null);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to fetch bookings.");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error("Error fetching bookings:", err.message);
+      } else {
+        console.error("Unknown error occurred.");
+      }
     }
-  };
+  }, [currentPage, searchTerm, filterStatus]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const formatDateTimeRange = (start: string, end: string) => {
     const s = new Date(start);
@@ -134,11 +130,13 @@ export default function BookingsPage() {
   };
 
   const handlePageChange = (page: number) => setCurrentPage(page);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
     fetchBookings();
   };
+
   const handleRefresh = () => {
     setCurrentPage(1);
     fetchBookings();
@@ -199,7 +197,7 @@ export default function BookingsPage() {
               <tr>
                 <th className="px-6 py-4 text-left font-medium text-gray-900">Title</th>
                 <th className="px-6 py-4 text-left font-medium text-gray-900">Room</th>
-                <th className="px-6 py-4 text-left font-medium text-gray-900">Create By</th>
+                <th className="px-6 py-4 text-left font-medium text-gray-900">Created By</th>
                 <th className="px-6 py-4 text-left font-medium text-gray-900">DateTime</th>
                 <th className="px-6 py-4 text-left font-medium text-gray-900">Status</th>
               </tr>
@@ -239,7 +237,9 @@ export default function BookingsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900">{item.user?.username || item.username}</span>
+                        <span className="text-gray-900">
+                          {item.user?.username || item.username}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -271,9 +271,9 @@ export default function BookingsPage() {
         {pagination && pagination.totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <div className="text-sm text-gray-700">
-              แสดง {((currentPage - 1) * pagination.limit) + 1} ถึง{" "}
-              {Math.min(currentPage * pagination.limit, pagination.totalRecords)} จาก{" "}
-              {pagination.totalRecords} รายการ
+              Showing {((currentPage - 1) * pagination.limit) + 1} to{" "}
+              {Math.min(currentPage * pagination.limit, pagination.totalRecords)} of{" "}
+              {pagination.totalRecords} results
             </div>
             <div className="flex gap-2">
               <button

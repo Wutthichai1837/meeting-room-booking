@@ -45,12 +45,12 @@ const DashboardOverview = () => {
     const fetchDashboardData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const authHeaders = token
-          ? {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            }
-          : {};
+        const authHeaders: Record<string, string> = token
+  ? {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  : {};
 
         const [overviewRes, activeRes, myTodayRes, recentRes, roomStatusRes] = await Promise.all([
           fetch('/api/dashboard/overview', { headers: authHeaders }),
@@ -136,15 +136,16 @@ const DashboardOverview = () => {
     }
   };
 
-  const getColorClasses = (color: string) => {
-    const colors = {
+    const getColorClasses = (color: Stat['color']): string => {
+    const colors: Record<Stat['color'], string> = {
       blue: 'bg-blue-50 text-blue-700 border-blue-200',
       green: 'bg-green-50 text-green-700 border-green-200',
       purple: 'bg-purple-50 text-purple-700 border-purple-200',
       orange: 'bg-orange-50 text-orange-700 border-orange-200',
     };
-    return colors[color] || colors.blue;
+    return colors[color];
   };
+
 
   return (
     <div className="space-y-6">

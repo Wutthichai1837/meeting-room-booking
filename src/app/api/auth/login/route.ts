@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/database';
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { handleOptions, createCorsResponse, createErrorResponse } from '@/lib/cors';
@@ -20,7 +20,17 @@ export async function POST(request: NextRequest) {
       `SELECT id, username, email, password_hash, first_name, last_name, phone, department, role
        FROM users WHERE username = ?`,
       [username]
-    ) as any;
+    ) as {
+      id: number;
+      username: string;
+      email: string;
+      password_hash: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      department: string;
+      role: string;
+    } | null;
 
     if (!user || !user.password_hash) {
       return createErrorResponse('username or password incorrect', request, 401);
@@ -31,14 +41,18 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('username or password incorrect', request, 401);
     }
 
+    type Role = 'user' | 'admin';
+    const role: Role = user.role === 'admin' ? 'admin' : 'user';
+
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: role,
       first_name: user.first_name,
       last_name: user.last_name,
       username: `${user.first_name} ${user.last_name}`,
     });
+
 
     const userData = {
       id: user.id,

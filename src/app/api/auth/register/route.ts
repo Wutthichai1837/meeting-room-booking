@@ -11,7 +11,7 @@ function corsHeaders() {
   };
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders(),
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         `INSERT INTO users (username, email, password_hash, first_name, last_name, phone, department, role, email_verified, is_active, created_at) 
          VALUES (?, ?, ?, ?, ?, ?, ?, 'user', TRUE, 1, NOW())`,
         [username, email, hashedPassword, firstName, lastName, phone || null, department]
-      ) as any;
+      ) as { insertId: number };
 
       const userId = result.insertId;
 

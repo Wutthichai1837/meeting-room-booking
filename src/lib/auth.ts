@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 
 // Environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET! || 'your-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // -------------------- Types --------------------
@@ -39,7 +39,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 
 // -------------------- JWT Handling --------------------
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload as object, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): JWTPayload | null {

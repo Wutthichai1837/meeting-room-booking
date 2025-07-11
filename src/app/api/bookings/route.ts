@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     const userRow = await db.queryRow(
       `SELECT first_name, last_name FROM users WHERE id = ?`,
       [payload.userId]
-    ) as any;
+    ) as { first_name: string; last_name: string } | null;
 
-    const userFullName = `${userRow.first_name} ${userRow.last_name}`.trim();
+    const userFullName = userRow ? `${userRow.first_name} ${userRow.last_name}`.trim() : 'Unknown User';
     console.log('👤 ผู้จอง:', userFullName);
 
     const body = await request.json();
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const room = await db.queryRow(
       `SELECT id, name, capacity, is_active FROM meeting_rooms WHERE id = ?`,
       [roomId]
-    ) as any;
+    ) as { id: number; name: string; capacity: number; is_active: boolean } | null;
 
     if (!room || !room.is_active) {
       return NextResponse.json({ success: false, message: 'ห้องไม่พร้อมใช้งาน' }, { status: 404 });
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    const bookingId = (insertResult as any).insertId;
+    const bookingId = (insertResult as { insertId: number }).insertId;
 
     if (attendees && attendees.length > 0) {
       const attendeeQueries = attendees.map((attendee: { email: string; name?: string }) => ({
