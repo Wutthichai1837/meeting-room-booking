@@ -9,7 +9,7 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0,
-  connectTimeout: 60000, 
+  connectTimeout: 60000,
   charset: 'utf8mb4',
   timezone: '+07:00',
   enableKeepAlive: true,
@@ -19,12 +19,16 @@ const dbConfig = {
 // Create connection pool
 const pool = mysql.createPool(dbConfig);
 
-// Event listeners (optional in production; can be disabled for silence)
+// Add `.on('error')` safely without using `any`
+const poolWithEvents = pool as typeof pool & {
+  on: (event: 'error', listener: (err: Error) => void) => void;
+};
+
 if (process.env.NODE_ENV !== 'production') {
   pool.on('connection', (conn: PoolConnection) => console.log('📊 New DB connection:', conn.threadId));
   pool.on('acquire', (conn: PoolConnection) => console.log('🔄 Connection acquired:', conn.threadId));
   pool.on('release', (conn: PoolConnection) => console.log('✅ Connection released:', conn.threadId));
-  (pool as any).on('error', (err: Error) => console.error('❌ Pool error:', err));
+  poolWithEvents.on('error', (err: Error) => console.error('❌ Pool error:', err));
 }
 
 export const db = {
